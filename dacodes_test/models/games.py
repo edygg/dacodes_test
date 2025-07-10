@@ -103,6 +103,7 @@ def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
             func.avg(GameSessionModel.deviation).label("avg_deviation"),
             func.min(GameSessionModel.deviation).label("best_deviation")
         )
+        .where(GameSessionModel.status == GameSessionStatus.STOPPED)
         .group_by(GameSessionModel.user_id)
         .subquery()
     )
@@ -143,6 +144,7 @@ def user_game_history(session: Session, user_id: int):
             func.min(GameSessionModel.deviation).label("best_deviation")
         )
         .where(GameSessionModel.user_id == user_id)
+        .where(GameSessionModel.status == GameSessionStatus.STOPPED)
         .group_by(GameSessionModel.user_id)
         .subquery()
     )
@@ -179,6 +181,7 @@ def has_game_history(session: Session, user_id: int):
     query = (
         select(GameSessionModel)
             .where(GameSessionModel.user_id == user_id)
+            .where(GameSessionModel.status == GameSessionStatus.STOPPED)
     )
     results = session.execute(query).all()
     return len(results) > 0
