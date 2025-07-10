@@ -16,7 +16,7 @@ from dacodes_test.responses.leaderboards import LeaderboardUserStatsItem, UserSt
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await create_db_and_tables()
-    await test_data()
+    # await test_data()
     yield
 
 app = FastAPI(
@@ -35,7 +35,7 @@ async def register_user(
         user: UserCreate,
         session: SessionDep,
 ):
-    return create_user(session, user)
+    return await create_user(session, user)
 
 
 @app.post("/auth/login", response_model=Token)
