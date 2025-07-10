@@ -7,7 +7,7 @@ from dacodes_test.auth.jwt import OAuth2LoginDep, authenticate_user, ACCESS_TOKE
     Token, CurrentUserDep
 from dacodes_test.models import SessionDep, create_db_and_tables, test_data
 from dacodes_test.models.games import GameSessionModel, start_game_session, stop_game_session, calc_leaderboard, \
-    user_game_history
+    user_game_history, has_game_history
 from dacodes_test.models.users import User, create_user, get_user_by_id
 from dacodes_test.payloads.users import UserCreate
 from dacodes_test.responses.leaderboards import LeaderboardUserStatsItem, UserStatsAndHistory
@@ -72,10 +72,12 @@ async def start_game(
 async def stop_game(
         game_session_id: int,
         session: SessionDep,
+        current_user: CurrentUserDep,
 ):
     game_session = stop_game_session(
         session,
         game_session_id,
+        current_user.id,
     )
 
     if not game_session:
@@ -107,6 +109,14 @@ async def get_user_game_history(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No user found.",
+        )
+
+    has_games = has_game_history(session, user_id)
+
+    if not has_games:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No games found.",
         )
 
     return user_game_history(session, user_id)

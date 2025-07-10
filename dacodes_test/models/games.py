@@ -60,12 +60,13 @@ def start_game_session(session: Session, user_id: int):
     return game_session
 
 
-def stop_game_session(session: Session, game_session_id: int) -> GameSessionModel | None:
+def stop_game_session(session: Session, game_session_id: int, user_id: int) -> GameSessionModel | None:
     EXPIRED_THRESHOLD_IN_SECONDS = 30 * 60 * 60  # 30 minute in seconds
 
     query = (
         select(GameSessionModel)
             .where(GameSessionModel.id == game_session_id)
+            .where(GameSessionModel.user_id == user_id)
             .where(GameSessionModel.status == GameSessionStatus.ACTIVE)
     )
 
@@ -172,3 +173,12 @@ def user_game_history(session: Session, user_id: int):
         "best_deviation": float(stats.best_deviation),
         "history": [g.dict() for g in game_history],
     }
+
+
+def has_game_history(session: Session, user_id: int):
+    query = (
+        select(GameSessionModel)
+            .where(GameSessionModel.user_id == user_id)
+    )
+    results = session.execute(query).all()
+    return len(results) > 0
