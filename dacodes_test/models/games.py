@@ -60,7 +60,7 @@ def start_game_session(session: Session, user_id: int):
 
 
 def stop_game_session(session: Session, game_session_id: int) -> GameSessionModel | None:
-    EXPIRED_THRESHOLD_IN_SECONDS = 30 * 60  # 30 minute in seconds
+    EXPIRED_THRESHOLD_IN_SECONDS = 30 * 60 * 60  # 30 minute in seconds
 
     query = (
         select(GameSessionModel)
