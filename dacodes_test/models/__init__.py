@@ -25,20 +25,23 @@ def test_data():
     from dacodes_test.models.users import UserModel, get_user_password_hash
 
     with Session(engine) as session:
-        session.add(UserModel(
-            username="edygg_1",
-            email="efgm1024@gmail.com",
-            password_hash=get_user_password_hash("password"),
-        ))
-        session.add(UserModel(
-            username="edygg_2",
-            email="efgm1025@gmail.com",
-            password_hash=get_user_password_hash("password"),
-        ))
-        session.add(UserModel(
-            username="edygg_3",
-            email="efgm1026@gmail.com",
-            password_hash=get_user_password_hash("password"),
-        ))
-        session.commit()
+        try:
+            session.add(UserModel(
+                username="edygg_1",
+                email="efgm1024@gmail.com",
+                password_hash=get_user_password_hash("password"),
+            ))
+            session.add(UserModel(
+                username="edygg_2",
+                email="efgm1025@gmail.com",
+                password_hash=get_user_password_hash("password"),
+            ))
+            session.add(UserModel(
+                username="edygg_3",
+                email="efgm1026@gmail.com",
+                password_hash=get_user_password_hash("password"),
+            ))
+            session.commit()
+        except:
+            pass
 

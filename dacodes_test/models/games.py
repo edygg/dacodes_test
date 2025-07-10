@@ -3,6 +3,7 @@ from sqlalchemy import TIMESTAMP, Column, func
 from sqlmodel import Field, Session, SQLModel, select
 
 from dacodes_test.models.utils import get_utc_timestamp
+from dacodes_test.models.users import UserModel
 
 
 class GameSessionStatus:
@@ -91,3 +92,42 @@ def stop_game_session(session: Session, game_session_id: int) -> GameSessionMode
     session.commit()
     session.refresh(game_session)
     return game_session
+
+
+def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
+    subquery = (
+        session.query(
+            GameSessionModel.user_id,
+            func.count(GameSessionModel.id).label('total_games'),
+            func.avg(GameSessionModel.deviation).label('avg_deviation'),
+            func.min(GameSessionModel.deviation).label('best_deviation')
+        )
+        .group_by(GameSessionModel.user_id)
+        .subquery()
+    )
+
+    query = (
+        session.query(
+            UserModel.username,
+            subquery.c.total_games,
+            subquery.c.avg_deviation,
+            subquery.c.best_deviation
+        )
+        .join(subquery, UserModel.id == subquery.c.user_id)
+        .order_by(subquery.c.avg_deviation.asc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+
+    results = query.all()
+
+    leaderboard = [
+        {
+            'username': row.username,
+            'total_games': row.total_games,
+            'average_deviation': float(row.avg_deviation),
+            'best_deviation': float(row.best_deviation),
+        }
+        for row in results
+    ]
+    return leaderboard
