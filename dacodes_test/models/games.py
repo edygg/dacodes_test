@@ -98,9 +98,9 @@ def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
     subquery = (
         session.query(
             GameSessionModel.user_id,
-            func.count(GameSessionModel.id).label('total_games'),
-            func.avg(GameSessionModel.deviation).label('avg_deviation'),
-            func.min(GameSessionModel.deviation).label('best_deviation')
+            func.count(GameSessionModel.id).label("total_games"),
+            func.avg(GameSessionModel.deviation).label("avg_deviation"),
+            func.min(GameSessionModel.deviation).label("best_deviation")
         )
         .group_by(GameSessionModel.user_id)
         .subquery()
@@ -123,11 +123,52 @@ def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
 
     leaderboard = [
         {
-            'username': row.username,
-            'total_games': row.total_games,
-            'average_deviation': float(row.avg_deviation),
-            'best_deviation': float(row.best_deviation),
+            "username": row.username,
+            "total_games": row.total_games,
+            "average_deviation": float(row.avg_deviation),
+            "best_deviation": float(row.best_deviation),
         }
         for row in results
     ]
     return leaderboard
+
+
+def user_game_history(session: Session, user_id: int):
+    subquery = (
+        session.query(
+            GameSessionModel.user_id,
+            func.count(GameSessionModel.id).label("total_games"),
+            func.avg(GameSessionModel.deviation).label("avg_deviation"),
+            func.min(GameSessionModel.deviation).label("best_deviation")
+        )
+        .where(GameSessionModel.user_id == user_id)
+        .group_by(GameSessionModel.user_id)
+        .subquery()
+    )
+
+    stats_query = (
+        session.query(
+            UserModel.username,
+            subquery.c.total_games,
+            subquery.c.avg_deviation,
+            subquery.c.best_deviation
+        )
+        .join(subquery, UserModel.id == subquery.c.user_id)
+        .where(subquery.c.user_id == user_id)
+    )
+
+    stats = stats_query.first()
+
+    game_history_query = (
+        select(GameSessionModel)
+            .where(GameSessionModel.user_id == user_id)
+    )
+    game_history = session.exec(game_history_query).all()
+    
+    return {
+        "username": stats.username,
+        "total_games": stats.total_games,
+        "average_deviation": float(stats.avg_deviation),
+        "best_deviation": float(stats.best_deviation),
+        "history": [g.dict() for g in game_history],
+    }
