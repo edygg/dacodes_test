@@ -30,8 +30,8 @@ class Token(BaseModel):
     token_type: str
 
 
-def authenticate_user(session: Session, username: str, password: str):
-    user = get_user_by_username(session, username)
+async def authenticate_user(session: Session, username: str, password: str):
+    user = await get_user_by_username(session, username)
     if not user:
         return False
     if not verify_user_password(password, user.password_hash):
@@ -67,7 +67,7 @@ async def get_current_user(
         token_data = TokenData(username=username)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user_by_username(session, username=token_data.username)
+    user = await get_user_by_username(session, username=token_data.username)
     if user is None:
         raise credentials_exception
     return user

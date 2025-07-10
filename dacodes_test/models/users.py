@@ -1,8 +1,9 @@
 from datetime import datetime
 from sqlalchemy import TIMESTAMP, Column, func
-from sqlmodel import Field, SQLModel, select, Session
+from sqlmodel import Field, SQLModel, select
 from passlib.context import CryptContext
 
+from dacodes_test.models import Session
 from dacodes_test.models.utils import get_utc_timestamp
 from dacodes_test.payloads.users import UserCreate
 
@@ -47,33 +48,33 @@ def get_user_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_user_by_username(session: Session, username: str):
+async def get_user_by_username(session: Session, username: str):
     query = (
         select(UserModel)
             .where(UserModel.username == username)
             .limit(1)
     )
-    results = session.exec(query)
+    results = await session.exec(query)
     return results.first()
 
 
-def create_user(session: Session, user: UserCreate) -> UserModel:
+async def create_user(session: Session, user: UserCreate) -> UserModel:
     user_model = UserModel(
         username=user.username,
         email=user.email,
         password_hash=get_user_password_hash(user.password),
     )
     session.add(user_model)
-    session.commit()
-    session.refresh(user_model)
+    await session.commit()
+    await session.refresh(user_model)
     return user_model
 
 
-def get_user_by_id(session: Session, user_id: int):
+async def get_user_by_id(session: Session, user_id: int):
     query = (
         select(UserModel)
             .where(UserModel.id == user_id)
             .limit(1)
     )
-    results = session.exec(query)
+    results = await session.exec(query)
     return results.first()

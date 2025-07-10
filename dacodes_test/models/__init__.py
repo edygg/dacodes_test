@@ -1,30 +1,33 @@
 from typing import Annotated
-from sqlmodel import Session, SQLModel, create_engine
+from sqlmodel import SQLModel, create_engine
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel.ext.asyncio.session import AsyncSession as Session
+
 from fastapi import Depends
 
 sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+sqlite_url = f"sqlite+aiosqlite:///{sqlite_file_name}"
 
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
-
-
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+engine = create_async_engine(sqlite_url)
 
 
-def get_session():
-    with Session(engine) as session:
+async def create_db_and_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+
+async def get_session():
+    async with Session(engine) as session:
         yield session
 
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
 
-def test_data():
+async def test_data():
     from dacodes_test.models.users import UserModel, get_user_password_hash
 
-    with Session(engine) as session:
+    async with Session(engine) as session:
         try:
             session.add(UserModel(
                 username="edygg_1",
@@ -41,7 +44,7 @@ def test_data():
                 email="efgm1026@gmail.com",
                 password_hash=get_user_password_hash("password"),
             ))
-            session.commit()
+            await session.commit()
         except:
             pass
 

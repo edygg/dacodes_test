@@ -15,8 +15,8 @@ from dacodes_test.responses.leaderboards import LeaderboardUserStatsItem, UserSt
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_db_and_tables()
-    test_data()
+    await create_db_and_tables()
+    await test_data()
     yield
 
 app = FastAPI(
@@ -43,7 +43,7 @@ async def login_user(
         form_data: OAuth2LoginDep,
         session: SessionDep,
 ):
-    user = authenticate_user(session, form_data.username, form_data.password)
+    user = await authenticate_user(session, form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -62,7 +62,7 @@ async def start_game(
         current_user: CurrentUserDep,
         session: SessionDep,
 ):
-    return start_game_session(
+    return await start_game_session(
         session,
         current_user.id,
     )
@@ -74,7 +74,7 @@ async def stop_game(
         session: SessionDep,
         current_user: CurrentUserDep,
 ):
-    game_session = stop_game_session(
+    game_session = await stop_game_session(
         session,
         game_session_id,
         current_user.id,
@@ -95,7 +95,7 @@ async def get_leaderboard(
         page: int = Query(default=1),
         per_page: int = Query(default=10),
 ):
-    return calc_leaderboard(session, page, per_page)
+    return await calc_leaderboard(session, page, per_page)
 
 
 @app.get("/analytics/user/{user_id}", response_model=UserStatsAndHistory)
@@ -103,7 +103,7 @@ async def get_user_game_history(
         user_id: int,
         session: SessionDep,
 ):
-    user = get_user_by_id(session, user_id)
+    user = await get_user_by_id(session, user_id)
 
     if not user:
         raise HTTPException(
@@ -111,7 +111,7 @@ async def get_user_game_history(
             detail="No user found.",
         )
 
-    has_games = has_game_history(session, user_id)
+    has_games = await has_game_history(session, user_id)
 
     if not has_games:
         raise HTTPException(
@@ -119,4 +119,4 @@ async def get_user_game_history(
             detail="No games found.",
         )
 
-    return user_game_history(session, user_id)
+    return await user_game_history(session, user_id)

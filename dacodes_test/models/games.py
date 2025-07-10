@@ -1,7 +1,8 @@
 from datetime import datetime
 from sqlalchemy import TIMESTAMP, Column, func
-from sqlmodel import Field, Session, SQLModel, select
+from sqlmodel import Field, SQLModel, select
 
+from dacodes_test.models import Session
 from dacodes_test.models.utils import get_utc_timestamp
 from dacodes_test.models.users import UserModel
 
@@ -40,14 +41,14 @@ class GameSessionModel(GameSession, table=True):
     pass
 
 
-def start_game_session(session: Session, user_id: int):
+async def start_game_session(session: Session, user_id: int):
     query = (
         select(GameSessionModel)
             .where(GameSessionModel.user_id == user_id)
             .where(GameSessionModel.status == GameSessionStatus.ACTIVE)
     )
 
-    results = session.exec(query)
+    results = await session.exec(query)
     has_active_game_session = results.first()
 
     if has_active_game_session:
@@ -55,12 +56,12 @@ def start_game_session(session: Session, user_id: int):
 
     game_session = GameSessionModel(user_id=user_id)
     session.add(game_session)
-    session.commit()
-    session.refresh(game_session)
+    await session.commit()
+    await session.refresh(game_session)
     return game_session
 
 
-def stop_game_session(session: Session, game_session_id: int, user_id: int) -> GameSessionModel | None:
+async def stop_game_session(session: Session, game_session_id: int, user_id: int) -> GameSessionModel | None:
     EXPIRED_THRESHOLD_IN_SECONDS = 30 * 60 * 60  # 30 minute in seconds
 
     query = (
@@ -70,7 +71,7 @@ def stop_game_session(session: Session, game_session_id: int, user_id: int) -> G
             .where(GameSessionModel.status == GameSessionStatus.ACTIVE)
     )
 
-    results = session.exec(query)
+    results = await session.exec(query)
     game_session = results.first()
 
     if not game_session:
@@ -78,8 +79,8 @@ def stop_game_session(session: Session, game_session_id: int, user_id: int) -> G
 
     game_session.stop_time = get_utc_timestamp()
     session.add(game_session)
-    session.commit()
-    session.refresh(game_session)
+    await session.commit()
+    await session.refresh(game_session)
 
     delta_time = game_session.stop_time - game_session.start_time
 
@@ -90,14 +91,14 @@ def stop_game_session(session: Session, game_session_id: int, user_id: int) -> G
     game_session.deviation = calc_deviation_in_milliseconds
 
     session.add(game_session)
-    session.commit()
-    session.refresh(game_session)
+    await session.commit()
+    await session.refresh(game_session)
     return game_session
 
 
-def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
+async def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
     subquery = (
-        session.query(
+        select(
             GameSessionModel.user_id,
             func.count(GameSessionModel.id).label("total_games"),
             func.avg(GameSessionModel.deviation).label("avg_deviation"),
@@ -109,7 +110,7 @@ def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
     )
 
     query = (
-        session.query(
+        select(
             UserModel.username,
             subquery.c.total_games,
             subquery.c.avg_deviation,
@@ -121,7 +122,7 @@ def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
         .limit(per_page)
     )
 
-    results = query.all()
+    results = (await session.execute(query)).all()
 
     leaderboard = [
         {
@@ -135,9 +136,9 @@ def calc_leaderboard(session: Session, page: int = 1, per_page: int = 10):
     return leaderboard
 
 
-def user_game_history(session: Session, user_id: int):
+async def user_game_history(session: Session, user_id: int):
     subquery = (
-        session.query(
+        select(
             GameSessionModel.user_id,
             func.count(GameSessionModel.id).label("total_games"),
             func.avg(GameSessionModel.deviation).label("avg_deviation"),
@@ -150,7 +151,7 @@ def user_game_history(session: Session, user_id: int):
     )
 
     stats_query = (
-        session.query(
+        select(
             UserModel.username,
             subquery.c.total_games,
             subquery.c.avg_deviation,
@@ -160,13 +161,13 @@ def user_game_history(session: Session, user_id: int):
         .where(subquery.c.user_id == user_id)
     )
 
-    stats = stats_query.first()
+    stats = (await session.execute(stats_query)).first()
 
     game_history_query = (
         select(GameSessionModel)
             .where(GameSessionModel.user_id == user_id)
     )
-    game_history = session.exec(game_history_query).all()
+    game_history = (await session.exec(game_history_query)).all()
     
     return {
         "username": stats.username,
@@ -177,11 +178,10 @@ def user_game_history(session: Session, user_id: int):
     }
 
 
-def has_game_history(session: Session, user_id: int):
+async def has_game_history(session: Session, user_id: int):
     query = (
         select(GameSessionModel)
             .where(GameSessionModel.user_id == user_id)
-            .where(GameSessionModel.status == GameSessionStatus.STOPPED)
     )
-    results = session.execute(query).all()
+    results = (await session.exec(query)).all()
     return len(results) > 0
