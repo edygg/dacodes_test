@@ -1,12 +1,13 @@
-from datetime import datetime, UTC
+from datetime import datetime
 from sqlalchemy import TIMESTAMP, Column, func
 from sqlmodel import Field, SQLModel, select, Session
 from passlib.context import CryptContext
 
+from dacodes_test.models.utils import get_utc_timestamp
 from dacodes_test.payloads.users import UserCreate
 
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-get_utc_timestamp = lambda: datetime.now(tz=UTC)
 
 
 class User(SQLModel):

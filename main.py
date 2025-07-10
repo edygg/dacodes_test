@@ -4,8 +4,9 @@ from datetime import timedelta
 from fastapi import FastAPI, HTTPException, status
 
 from dacodes_test.auth.jwt import OAuth2LoginDep, authenticate_user, ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, \
-    Token
+    Token, CurrentUserDep
 from dacodes_test.models import SessionDep, create_db_and_tables, test_data
+from dacodes_test.models.games import GameSessionModel, start_game_session, stop_game_session
 from dacodes_test.models.users import User, create_user
 from dacodes_test.payloads.users import UserCreate
 
@@ -52,3 +53,33 @@ async def login_user(
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
+
+
+@app.post("/games/start", response_model=GameSessionModel)
+async def start_game(
+        current_user: CurrentUserDep,
+        session: SessionDep,
+):
+    return start_game_session(
+        session,
+        current_user.id,
+    )
+
+
+@app.post("/games/{game_session_id}/stop", response_model=GameSessionModel)
+async def stop_game(
+        game_session_id: int,
+        session: SessionDep,
+):
+    game_session = stop_game_session(
+        session,
+        game_session_id,
+    )
+
+    if not game_session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No active session found.",
+        )
+
+    return game_session
