@@ -67,3 +67,13 @@ def create_user(session: Session, user: UserCreate) -> UserModel:
     session.commit()
     session.refresh(user_model)
     return user_model
+
+
+def get_user_by_id(session: Session, user_id: int):
+    query = (
+        select(UserModel)
+            .where(UserModel.id == user_id)
+            .limit(1)
+    )
+    results = session.exec(query)
+    return results.first()

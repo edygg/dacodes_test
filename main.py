@@ -8,7 +8,7 @@ from dacodes_test.auth.jwt import OAuth2LoginDep, authenticate_user, ACCESS_TOKE
 from dacodes_test.models import SessionDep, create_db_and_tables, test_data
 from dacodes_test.models.games import GameSessionModel, start_game_session, stop_game_session, calc_leaderboard, \
     user_game_history
-from dacodes_test.models.users import User, create_user
+from dacodes_test.models.users import User, create_user, get_user_by_id
 from dacodes_test.payloads.users import UserCreate
 from dacodes_test.responses.leaderboards import LeaderboardUserStatsItem, UserStatsAndHistory
 
@@ -101,5 +101,12 @@ async def get_user_game_history(
         user_id: int,
         session: SessionDep,
 ):
-    # TODO Validate if user exists
+    user = get_user_by_id(session, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No user found.",
+        )
+
     return user_game_history(session, user_id)
